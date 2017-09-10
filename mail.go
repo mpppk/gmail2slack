@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -89,6 +90,15 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
+type MessageOpt struct {
+	Key   string
+	Value string
+}
+
+func (m *MessageOpt) Get() (string, string) {
+	return m.Key, m.Value
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -110,18 +120,25 @@ func main() {
 		log.Fatalf("Unable to retrieve gmail Client %v", err)
 	}
 
-	user := "me"
-	r, err := srv.Users.Labels.List(user).Do()
+	userName := "me"
+	mr, err := srv.Users.Messages.List(userName).Do(
+		&MessageOpt{"maxResults", "1"},
+	)
 	if err != nil {
-		log.Fatalf("Unable to retrieve labels. %v", err)
+		log.Fatalf("Unable to retrieve messages. %v", err)
 	}
-	if len(r.Labels) > 0 {
-		fmt.Print("Labels:\n")
-		for _, l := range r.Labels {
-			fmt.Printf("- %s\n", l.Name)
-		}
-	} else {
-		fmt.Print("No labels found.")
-	}
+	fmt.Printf("%#v\n", mr)
 
+	for _, m := range mr.Messages {
+		mmr, err := srv.Users.Messages.Get(userName, m.Id).Do()
+		if err != nil {
+			log.Fatalf("Unable to retrieve messages. %v", err)
+		}
+		b64, err := base64.URLEncoding.DecodeString(mmr.Payload.Body.Data)
+		if err != nil {
+			fmt.Printf("Error0: %v\n", err)
+		}
+
+		fmt.Println(string(b64))
+	}
 }
