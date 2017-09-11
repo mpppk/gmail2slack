@@ -122,6 +122,7 @@ func main() {
 
 	userName := "me"
 	mr, err := srv.Users.Messages.List(userName).Do(
+		&MessageOpt{"q", os.Args[1]},
 		&MessageOpt{"maxResults", "1"},
 	)
 	if err != nil {
