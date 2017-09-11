@@ -12,6 +12,8 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"strings"
+
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -123,12 +125,11 @@ func main() {
 	userName := "me"
 	mr, err := srv.Users.Messages.List(userName).Do(
 		&MessageOpt{"q", os.Args[1]},
-		&MessageOpt{"maxResults", "1"},
+		&MessageOpt{"maxResults", "5"},
 	)
 	if err != nil {
 		log.Fatalf("Unable to retrieve messages. %v", err)
 	}
-	fmt.Printf("%#v\n", mr)
 
 	for _, m := range mr.Messages {
 		mmr, err := srv.Users.Messages.Get(userName, m.Id).Do()
@@ -140,6 +141,32 @@ func main() {
 			fmt.Printf("Error0: %v\n", err)
 		}
 
-		fmt.Println(string(b64))
+		message := string(b64)
+		lines := strings.Split(message, "\n")
+		slackMessage := ""
+
+		if strings.Contains(message, "お荷物の受け取り日時変更のご依頼") {
+			for _, line := range lines {
+				if strings.Contains(line, "■お受け取りご希望日時") ||
+					strings.Contains(line, "■伝票番号") {
+					slackMessage += line + "\n"
+				}
+			}
+		} else if strings.Contains(message, "お荷物のお届けについてお知らせします。") {
+			arrivalDateLinesNum := 4
+			arrivalDateLinesCount := 0
+			for _, line := range lines {
+				if strings.Contains(line, "■お届け予定日時") {
+					arrivalDateLinesCount++
+					slackMessage += line + "\n"
+				} else if arrivalDateLinesCount > 0 && arrivalDateLinesCount < arrivalDateLinesNum {
+					slackMessage += line + "\n"
+					arrivalDateLinesCount++
+				}
+			}
+		}
+		if slackMessage != "" {
+			fmt.Println(slackMessage)
+		}
 	}
 }
