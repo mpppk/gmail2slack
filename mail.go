@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"strings"
 
@@ -122,6 +123,8 @@ func main() {
 		log.Fatalf("Unable to retrieve gmail Client %v", err)
 	}
 
+	fromTime := time.Now().Add(-time.Duration(6) * time.Hour)
+	newFromTime := fromTime
 	userName := "me"
 	mr, err := srv.Users.Messages.List(userName).Do(
 		&MessageOpt{"q", os.Args[1]},
@@ -136,6 +139,19 @@ func main() {
 		if err != nil {
 			log.Fatalf("Unable to retrieve messages. %v", err)
 		}
+
+		timeDiff := fromTime.Unix()*1000 - mmr.InternalDate
+		fmt.Println(timeDiff)
+
+		// Messages are arranged in descending order
+		if timeDiff > 0 {
+			break
+		} else {
+			if (mmr.InternalDate - newFromTime.Unix()*1000) > 0 {
+				newFromTime = time.Unix(mmr.InternalDate/1000, 0)
+			}
+		}
+
 		b64, err := base64.URLEncoding.DecodeString(mmr.Payload.Body.Data)
 		if err != nil {
 			fmt.Printf("Error0: %v\n", err)
@@ -169,4 +185,5 @@ func main() {
 			fmt.Println(slackMessage)
 		}
 	}
+	ioutil.WriteFile("time.txt", []byte(newFromTime.String()), 0777)
 }
