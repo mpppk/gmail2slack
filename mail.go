@@ -123,7 +123,21 @@ func main() {
 		log.Fatalf("Unable to retrieve gmail Client %v", err)
 	}
 
-	fromTime := time.Now().Add(-time.Duration(6) * time.Hour)
+	var fromTime time.Time
+	_, statErr := os.Stat("time.txt")
+	if statErr == nil {
+		content, err := ioutil.ReadFile("time.txt")
+		if err != nil {
+			panic(err)
+		}
+		fromTime, err = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", string(content))
+		if err != nil {
+			panic(err)
+		}
+	} else {z
+		fromTime = time.Now().Add(-time.Duration(6) * time.Hour)
+	}
+
 	newFromTime := fromTime
 	userName := "me"
 	mr, err := srv.Users.Messages.List(userName).Do(
@@ -141,7 +155,6 @@ func main() {
 		}
 
 		timeDiff := fromTime.Unix()*1000 - mmr.InternalDate
-		fmt.Println(timeDiff)
 
 		// Messages are arranged in descending order
 		if timeDiff > 0 {
