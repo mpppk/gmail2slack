@@ -15,11 +15,18 @@ import (
 
 	"strings"
 
+	"bytes"
+
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 )
+
+type SlackWebhookContent struct {
+	Text     string `json:"text"`
+	Username string `json:"username"`
+}
 
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
@@ -134,8 +141,8 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-	} else {z
-		fromTime = time.Now().Add(-time.Duration(6) * time.Hour)
+	} else {
+		fromTime = time.Now().Add(-time.Duration(200) * time.Hour)
 	}
 
 	newFromTime := fromTime
@@ -196,7 +203,18 @@ func main() {
 		}
 		if slackMessage != "" {
 			fmt.Println(slackMessage)
+			content, err := json.Marshal(SlackWebhookContent{Text: slackMessage, Username: "YAMATO"})
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = http.Post("https://hooks.slack.com/services/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", "application/json", bytes.NewReader(content))
+			if err != nil {
+				panic(err)
+			}
+
 		}
+
 	}
 	ioutil.WriteFile("time.txt", []byte(newFromTime.String()), 0777)
 }
